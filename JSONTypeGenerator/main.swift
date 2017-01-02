@@ -26,20 +26,16 @@ let params = CommandLine.arguments.suffix(from: 1).reduce(([:], nil)) { (acc: ([
     }
     }.0
 
-guard let path = params["-i"] else {
+guard let inputPath = params["-i"] else {
     fatalError("invalid parameters")
 }
 
-guard let outputModlesPath = params["-om"] else {
+guard let outputPath = params["-o"] else {
     fatalError("invalid parameters")
 }
 
-guard let outputExtensionsPath = params["-oe"] else {
-    fatalError("invalid parameters")
-}
-
-guard let input = try? String(contentsOfFile: path) else {
-    fatalError("invalid input:\(path)")
+guard let input = try? String(contentsOfFile: inputPath) else {
+    fatalError("invalid input:\(inputPath)")
 }
 
 guard let bagExpress = try? NSRegularExpression(pattern: "(struct|class)\\s*?\\w+\\s*?\\{.*?\\}", options: [.dotMatchesLineSeparators]) else {
@@ -54,12 +50,11 @@ guard let nameExpress = try? NSRegularExpression(pattern: "(?<=struct|class).*?(
     fatalError("regular expression error!!!")
 }
 
-guard let propertyExpress = try? NSRegularExpression(pattern: "(let|var)\\s*?\\w+\\s*?:\\s*?\\w+(\\s*?<\\s*?\\w+?)?", options: []) else {
+guard let propertyExpress = try? NSRegularExpression(pattern: "(let|var)\\s*?\\w+\\s*?:\\s*?\\w+(\\s*?<\\s*?\\w+)?", options: []) else {
     fatalError("regular expression error!!!")
 }
 
-var modelString = ""
-var extensionString = ""
+var modelString = "import JSONType\n\n"
 
 bagExpress.enumerateMatches(in: input, options: [], range: NSRange(location: 0, length: input.characters.count)) { (result, _, _) in
     if let range = result?.range {
@@ -86,8 +81,8 @@ bagExpress.enumerateMatches(in: input, options: [], range: NSRange(location: 0, 
             fatalError("name find error!!!")
         }
         
-        modelString.append("\(bagType) \(bagName) {\n")
-        extensionString.append("extenstion \(bagName): JSONType {\n")
+        modelString.append("\(bagType) \(bagName): JSONType {\n")
+        var extensionString = "\tinit?(rawValue: Any?) {\n"
         
         propertyExpress.enumerateMatches(in: bag, options: [], range: NSRange(location: 0, length: bag.characters.count), using: { (propertyResult, _, _) in
             if let range = propertyResult?.range {
@@ -99,15 +94,18 @@ bagExpress.enumerateMatches(in: input, options: [], range: NSRange(location: 0, 
                 let jsonKey = lastPropertyBag?.count == 2 ? (lastPropertyBag?.last ?? "").trimmingCharacters(in: .whitespaces) : propertyName
                 
                 modelString.append("\t\(propertyContract) \(propertyName): \(propertyType)?\n")
+                extensionString.append("\t\t\(propertyName) = \(propertyType).pick(from: rawValue, with: \"\(jsonKey)\")\n")
             }
         })
         
+        extensionString.append("\t}\n")
+        
+        modelString.append("\n")
+        modelString.append(extensionString)
         modelString.append("}\n\n")
-        extensionString.append("}\n\n")
     }
 }
 
 
-try modelString.write(toFile: outputModlesPath, atomically: true, encoding: .utf8)
+try modelString.write(toFile: outputPath, atomically: true, encoding: .utf8)
 
-try extensionString.write(toFile: outputExtensionsPath, atomically: true, encoding: .utf8)
