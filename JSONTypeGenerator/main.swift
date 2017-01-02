@@ -50,7 +50,7 @@ guard let nameExpress = try? NSRegularExpression(pattern: "(?<=struct|class).*?(
     fatalError("regular expression error!!!")
 }
 
-guard let propertyExpress = try? NSRegularExpression(pattern: "(let|var)\\s*?\\w+\\s*?:\\s*?\\w+(\\s*?<\\s*?\\w+)?", options: []) else {
+guard let propertyExpress = try? NSRegularExpression(pattern: "(let|var)\\s*?\\w+\\s*?:\\s*?.+(\\s*?~\\s*?\\w+)?", options: []) else {
     fatalError("regular expression error!!!")
 }
 
@@ -89,7 +89,7 @@ bagExpress.enumerateMatches(in: input, options: [], range: NSRange(location: 0, 
                 let propertyLine = bag.substring(with: range)
                 let propertyContract = (propertyLine.components(separatedBy: " ").first?.trimmingCharacters(in: .whitespaces) ?? "").trimmingCharacters(in: .whitespaces)
                 let propertyName = (propertyLine.components(separatedBy: " ")[1].components(separatedBy: ":").first?.trimmingCharacters(in: .whitespaces) ?? "").trimmingCharacters(in: .whitespaces)
-                let lastPropertyBag = propertyLine.components(separatedBy: ":").last?.components(separatedBy: "<")
+                let lastPropertyBag = propertyLine.components(separatedBy: ":").last?.components(separatedBy: "~")
                 let propertyType = (lastPropertyBag?.first ?? "").trimmingCharacters(in: .whitespaces)
                 let jsonKey = lastPropertyBag?.count == 2 ? (lastPropertyBag?.last ?? "").trimmingCharacters(in: .whitespaces) : propertyName
                 
